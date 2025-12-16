@@ -22,13 +22,18 @@ export const Analytics: React.FC<AnalyticsProps> = ({ activities, categories }) 
 
   // --- Data Preparation ---
 
-  // 1. Total hours per category (All time or filtered, here we do All Time for simplicity of "Totals")
+  // 1. Total hours per category 
+  // Note: If an activity has multiple categories, the time is attributed to ALL of them.
   const categoryTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     activities.forEach(act => {
       if (!act.endTime) return; // Skip active
       const hours = (act.endTime - act.startTime) / (1000 * 60 * 60);
-      totals[act.categoryId] = (totals[act.categoryId] || 0) + hours;
+      
+      // Add hours to each category in the list
+      act.categoryIds.forEach(catId => {
+        totals[catId] = (totals[catId] || 0) + hours;
+      });
     });
 
     return Object.entries(totals)
@@ -63,9 +68,12 @@ export const Analytics: React.FC<AnalyticsProps> = ({ activities, categories }) 
       const dayIndex = days.indexOf(actDate);
       
       if (dayIndex !== -1) {
-        const catName = getCategoryName(act.categoryId);
         const hours = (act.endTime - act.startTime) / (1000 * 60 * 60);
-        chartData[dayIndex][catName] += hours;
+        // Add time to each category
+        act.categoryIds.forEach(catId => {
+            const catName = getCategoryName(catId);
+            chartData[dayIndex][catName] += hours;
+        });
       }
     });
 

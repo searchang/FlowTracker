@@ -5,9 +5,10 @@ import { Icons } from './Icon';
 interface ActiveTrackerProps {
   activeActivity: Activity | null;
   categories: Category[];
-  onStart: (categoryId: string) => void;
+  onStart: (categoryIds: string[]) => void;
   onStop: () => void;
   onAddThought: (text: string) => void;
+  multiSelectEnabled: boolean;
 }
 
 export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
@@ -16,9 +17,11 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
   onStart,
   onStop,
   onAddThought,
+  multiSelectEnabled
 }) => {
   const [elapsed, setElapsed] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState<string>(categories[0]?.id || '');
+  // Store selected IDs as an array
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [thoughtText, setThoughtText] = useState('');
 
   useEffect(() => {
@@ -32,12 +35,32 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
     }
   }, [activeActivity]);
 
-  // Update selected category if the categories list changes or initializes
+  // Initial selection logic
   useEffect(() => {
-    if (!selectedCategory && categories.length > 0) {
-      setSelectedCategory(categories[0].id);
+    if (selectedCategoryIds.length === 0 && categories.length > 0) {
+      // Default to first category if nothing selected
+      setSelectedCategoryIds([categories[0].id]);
     }
-  }, [categories, selectedCategory]);
+  }, [categories]);
+
+  const handleCategoryClick = (id: string) => {
+    if (multiSelectEnabled) {
+      if (selectedCategoryIds.includes(id)) {
+        // Deselect, but prevent empty if you want? The prompt says "until at least 1 category is selected" for start button.
+        // So we allow empty state here, but block start.
+        setSelectedCategoryIds(prev => prev.filter(c => c !== id));
+      } else {
+        setSelectedCategoryIds(prev => [...prev, id]);
+      }
+    } else {
+      // Single select mode
+      setSelectedCategoryIds([id]);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedCategoryIds([]);
+  };
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor((ms / 1000) % 60);
@@ -47,8 +70,8 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
   };
 
   const handleStart = () => {
-    if (selectedCategory) {
-      onStart(selectedCategory);
+    if (selectedCategoryIds.length > 0) {
+      onStart(selectedCategoryIds);
     }
   };
 
@@ -60,24 +83,50 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
     }
   };
 
-  const currentCategory = activeActivity 
-    ? categories.find(c => c.id === activeActivity.categoryId) 
-    : categories.find(c => c.id === selectedCategory);
+  // Determine active categories for display
+  const currentCategories = activeActivity 
+    ? categories.filter(c => activeActivity.categoryIds.includes(c.id))
+    : categories.filter(c => selectedCategoryIds.includes(c.id));
+  
+  // Calculate Border Style
+  const getBorderStyle = () => {
+    if (currentCategories.length === 0) return '#3b82f6'; // Default Blue
+    if (currentCategories.length === 1) return currentCategories[0].color;
+    
+    // Conic Gradient for multiple
+    const colors = currentCategories.map(c => c.color);
+    // Repeat first color at end to close loop smoothly
+    const gradientColors = [...colors, colors[0]]; 
+    const step = 100 / (gradientColors.length - 1);
+    
+    const gradientStops = gradientColors.map((c, i) => `${c} ${i * step}%`).join(', ');
+    return `conic-gradient(from 0deg, ${gradientStops})`;
+  };
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto p-4 md:p-6 space-y-6 md:space-y-8 min-h-[80vh]">
       
       {/* Timer Display - Responsive Circle */}
       <div 
-        className="relative w-[70vw] h-[70vw] max-w-[20rem] max-h-[20rem] rounded-full flex items-center justify-center border-4 md:border-8 shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-colors duration-500 shrink-0"
-        style={{ borderColor: currentCategory?.color || '#3b82f6' }}
+        className="relative w-[70vw] h-[70vw] max-w-[20rem] max-h-[20rem] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.3)] transition-all duration-500 shrink-0"
+        style={{ 
+          background: `linear-gradient(#0f172a, #0f172a) padding-box, ${getBorderStyle()} border-box`,
+          border: '8px solid transparent',
+        }}
       >
-        <div className="text-4xl md:text-6xl font-mono font-bold tracking-wider text-white">
+        <div className="text-4xl md:text-6xl font-mono font-bold tracking-wider text-white z-10">
           {formatTime(elapsed)}
         </div>
         {activeActivity && (
-          <div className="absolute bottom-6 md:bottom-10 text-xs md:text-sm font-semibold uppercase tracking-widest text-gray-400">
-            {currentCategory?.name}
+          <div className="absolute bottom-6 md:bottom-10 flex flex-col items-center gap-1 z-10">
+             {currentCategories.slice(0, 2).map(c => (
+                <span key={c.id} className="text-xs md:text-sm font-semibold uppercase tracking-widest text-gray-400">
+                  {c.name}
+                </span>
+             ))}
+             {currentCategories.length > 2 && (
+               <span className="text-xs text-gray-500">+{currentCategories.length - 2} more</span>
+             )}
           </div>
         )}
       </div>
@@ -85,31 +134,49 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
       {/* Controls */}
       {!activeActivity ? (
         <div className="flex flex-col items-center space-y-4 w-full">
-          <label className="text-xs md:text-sm text-gray-400 uppercase tracking-wide font-semibold">Select Activity</label>
-          <div className="flex flex-wrap justify-center gap-2 md:gap-3 w-full">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full border-2 transition-all duration-200 flex items-center gap-2 text-sm md:text-base ${
-                  selectedCategory === cat.id 
-                    ? 'scale-105 bg-opacity-20' 
-                    : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-surface'
-                }`}
-                style={{ 
-                  borderColor: cat.color,
-                  backgroundColor: selectedCategory === cat.id ? `${cat.color}33` : undefined 
-                }}
+          <div className="flex items-center gap-2">
+            <label className="text-xs md:text-sm text-gray-400 uppercase tracking-wide font-semibold">
+              Select Activity
+            </label>
+            {multiSelectEnabled && selectedCategoryIds.length > 0 && (
+              <button 
+                onClick={handleClearSelection}
+                className="text-gray-500 hover:text-red-400 transition-colors"
+                title="Clear selection"
               >
-                <div className="w-2 h-2 md:w-3 md:h-3 rounded-full" style={{ backgroundColor: cat.color }} />
-                <span className="font-medium">{cat.name}</span>
+                <div className="w-5 h-5 flex items-center justify-center border border-current rounded-full text-xs">✕</div>
               </button>
-            ))}
+            )}
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-2 md:gap-3 w-full">
+            {categories.map((cat) => {
+              const isSelected = selectedCategoryIds.includes(cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategoryClick(cat.id)}
+                  className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full border-2 transition-all duration-200 flex items-center gap-2 text-sm md:text-base ${
+                    isSelected
+                      ? 'scale-105 bg-opacity-20' 
+                      : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-surface'
+                  }`}
+                  style={{ 
+                    borderColor: cat.color,
+                    backgroundColor: isSelected ? `${cat.color}33` : undefined 
+                  }}
+                >
+                  <div className="w-2 h-2 md:w-3 md:h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                  <span className="font-medium">{cat.name}</span>
+                  {isSelected && multiSelectEnabled && <Icons.Check className="w-3 h-3 md:w-4 md:h-4" />}
+                </button>
+              );
+            })}
           </div>
           <button
             onClick={handleStart}
-            disabled={!selectedCategory}
-            className="mt-6 md:mt-8 group relative px-8 py-4 bg-green-500 hover:bg-green-600 rounded-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
+            disabled={selectedCategoryIds.length === 0}
+            className="mt-6 md:mt-8 group relative px-8 py-4 bg-green-500 hover:bg-green-600 rounded-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full md:w-auto"
           >
             <div className="flex items-center justify-center gap-3 text-white font-bold text-lg md:text-xl">
               <Icons.Play className="w-5 h-5 md:w-6 md:h-6 fill-current" />

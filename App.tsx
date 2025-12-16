@@ -17,7 +17,12 @@ const INITIAL_CATEGORIES: Category[] = [
 const App: React.FC = () => {
   const [view, setView] = useState<ViewMode>(ViewMode.TRACKER);
   
-  // State
+  // Settings State
+  const [multiSelectEnabled, setMultiSelectEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('multiSelectEnabled') === 'true';
+  });
+
+  // Data State
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('categories');
     return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
@@ -25,17 +30,29 @@ const App: React.FC = () => {
 
   const [activities, setActivities] = useState<Activity[]>(() => {
     const saved = localStorage.getItem('activities');
-    return saved ? JSON.parse(saved) : [];
+    let parsed = saved ? JSON.parse(saved) : [];
+    // Migration: Ensure categoryIds exists
+    return parsed.map((a: any) => ({
+      ...a,
+      categoryIds: a.categoryIds || (a.categoryId ? [a.categoryId] : [])
+    }));
   });
 
   const [activeActivity, setActiveActivity] = useState<Activity | null>(() => {
     const saved = localStorage.getItem('activeActivity');
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    // Migration for active activity
+    return {
+      ...parsed,
+      categoryIds: parsed.categoryIds || (parsed.categoryId ? [parsed.categoryId] : [])
+    };
   });
 
   // Persistence
   useEffect(() => { localStorage.setItem('categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('activities', JSON.stringify(activities)); }, [activities]);
+  useEffect(() => { localStorage.setItem('multiSelectEnabled', String(multiSelectEnabled)); }, [multiSelectEnabled]);
   useEffect(() => { 
     if (activeActivity) localStorage.setItem('activeActivity', JSON.stringify(activeActivity));
     else localStorage.removeItem('activeActivity');
@@ -43,10 +60,10 @@ const App: React.FC = () => {
 
 
   // Actions
-  const handleStartActivity = (categoryId: string) => {
+  const handleStartActivity = (categoryIds: string[]) => {
     const newActivity: Activity = {
       id: crypto.randomUUID(),
-      categoryId,
+      categoryIds,
       startTime: Date.now(),
       endTime: null,
       thoughts: []
@@ -109,7 +126,7 @@ const App: React.FC = () => {
         </div>
 
         <div className="hidden md:block mt-auto text-xs text-gray-600 text-center">
-          v1.1
+          v1.2
         </div>
       </nav>
 
@@ -147,6 +164,7 @@ const App: React.FC = () => {
               onStart={handleStartActivity}
               onStop={handleStopActivity}
               onAddThought={handleAddThought}
+              multiSelectEnabled={multiSelectEnabled}
             />
           )}
 
@@ -164,6 +182,8 @@ const App: React.FC = () => {
               activities={activities}
               onUpdateCategories={setCategories} 
               onUpdateActivities={setActivities}
+              multiSelectEnabled={multiSelectEnabled}
+              setMultiSelectEnabled={setMultiSelectEnabled}
             />
           )}
         </div>

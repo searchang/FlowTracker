@@ -12,7 +12,7 @@ export interface Thought {
 
 export interface Activity {
   id: string;
-  categoryId: string;
+  categoryIds: string[];
   startTime: number;
   endTime: number | null;
   thoughts: Thought[];

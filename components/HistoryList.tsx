@@ -48,7 +48,16 @@ export const HistoryList: React.FC<HistoryListProps> = ({ activities, categories
           </h3>
           <div className="space-y-4">
             {(acts as Activity[]).map((activity) => {
-              const category = getCategory(activity.categoryId);
+              // Map all IDs to category objects
+              const currentCategories = activity.categoryIds
+                .map(id => getCategory(id))
+                .filter(Boolean) as Category[];
+
+              // Fallback if empty (shouldn't happen with new logic, but legacy data safe)
+              const displayCategories = currentCategories.length > 0 
+                ? currentCategories 
+                : [{id: 'unknown', name: 'Unknown', color: '#ccc'}];
+
               return (
                 <div 
                   key={activity.id} 
@@ -56,7 +65,16 @@ export const HistoryList: React.FC<HistoryListProps> = ({ activities, categories
                 >
                   {/* Left: Time & Color Indicator */}
                   <div className="flex items-center gap-4 sm:w-1/4 min-w-[150px]">
-                    <div className="w-1.5 h-12 rounded-full" style={{ backgroundColor: category?.color || '#ccc' }}></div>
+                    <div className="flex flex-col gap-0.5 h-12 justify-center">
+                       {displayCategories.map(c => (
+                         <div 
+                           key={c.id} 
+                           className="w-1.5 rounded-full flex-1" 
+                           style={{ backgroundColor: c.color }} 
+                           title={c.name}
+                         />
+                       ))}
+                    </div>
                     <div>
                       <div className="font-bold text-white text-lg">
                         {formatDuration(activity.startTime, activity.endTime)}
@@ -71,10 +89,16 @@ export const HistoryList: React.FC<HistoryListProps> = ({ activities, categories
 
                   {/* Middle: Info */}
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                       <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-800 text-gray-300" style={{ color: category?.color }}>
-                         {category?.name || 'Unknown'}
-                       </span>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                       {displayCategories.map(category => (
+                         <span 
+                           key={category.id} 
+                           className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-800 text-gray-300 border border-gray-700" 
+                           style={{ color: category.color, borderColor: `${category.color}44` }}
+                         >
+                           {category.name}
+                         </span>
+                       ))}
                     </div>
                     
                     {/* Thoughts display */}

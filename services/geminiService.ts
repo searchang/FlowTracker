@@ -18,8 +18,11 @@ export const generateInsights = async (activities: Activity[], categories: Categ
   
   const summary = recentActivities.map(a => {
     const duration = a.endTime ? (a.endTime - a.startTime) / 1000 / 60 : 0; // minutes
+    // Join multiple categories
+    const categoryNames = a.categoryIds.map(id => categoryMap.get(id) || 'Unknown').join(' & ');
+
     return {
-      category: categoryMap.get(a.categoryId) || 'Unknown',
+      categories: categoryNames,
       durationMinutes: Math.round(duration),
       date: new Date(a.startTime).toLocaleDateString(),
       thoughts: a.thoughts.map(t => t.text).join("; ")
@@ -32,7 +35,7 @@ export const generateInsights = async (activities: Activity[], categories: Categ
 
     Please provide a concise analysis in markdown format:
     1. A brief summary of how time was spent.
-    2. Any patterns noticed (e.g., specific days with high workload).
+    2. Any patterns noticed (e.g., specific days with high workload, multitasking).
     3. One actionable suggestion for better time management.
     4. If there are thoughts pinned to activities, summarize the user's mindset.
     

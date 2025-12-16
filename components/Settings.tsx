@@ -8,6 +8,8 @@ interface SettingsProps {
   activities: Activity[];
   onUpdateCategories: (categories: Category[]) => void;
   onUpdateActivities: (activities: Activity[]) => void;
+  multiSelectEnabled: boolean;
+  setMultiSelectEnabled: (enabled: boolean) => void;
 }
 
 type SettingsTab = 'categories' | 'sync';
@@ -16,7 +18,9 @@ export const Settings: React.FC<SettingsProps> = ({
   categories, 
   activities, 
   onUpdateCategories,
-  onUpdateActivities 
+  onUpdateActivities,
+  multiSelectEnabled,
+  setMultiSelectEnabled
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('categories');
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
@@ -129,7 +133,25 @@ export const Settings: React.FC<SettingsProps> = ({
       </div>
 
       {activeTab === 'categories' ? (
-        <CategoryManager categories={categories} onUpdate={onUpdateCategories} />
+        <div className="space-y-6">
+          <div className="bg-surface p-4 rounded-xl border border-gray-800 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-white">Allow Multi-select Categories</h3>
+              <p className="text-xs text-gray-500">Select multiple categories for a single activity session.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={multiSelectEnabled}
+                onChange={(e) => setMultiSelectEnabled(e.target.checked)}
+                className="sr-only peer" 
+              />
+              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+          
+          <CategoryManager categories={categories} onUpdate={onUpdateCategories} />
+        </div>
       ) : (
         <div className="space-y-6 animate-slide-up">
           
