@@ -16,6 +16,7 @@ export interface Activity {
   startTime: number;
   endTime: number | null;
   thoughts: Thought[];
+  mood?: string;
 }
 
 export enum ViewMode {

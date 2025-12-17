@@ -17,7 +17,11 @@ import {
   Upload,
   LogOut,
   Smartphone,
-  RotateCw
+  RotateCw,
+  Calendar,
+  ZoomIn,
+  ZoomOut,
+  X
 } from 'lucide-react';
 
 export const Icons = {
@@ -38,5 +42,9 @@ export const Icons = {
   Upload,
   LogOut,
   Smartphone,
-  Refresh: RotateCw
+  Refresh: RotateCw,
+  Calendar,
+  ZoomIn,
+  ZoomOut,
+  X
 };

@@ -16,10 +16,16 @@ const INITIAL_CATEGORIES: Category[] = [
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewMode>(ViewMode.TRACKER);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   // Settings State
   const [multiSelectEnabled, setMultiSelectEnabled] = useState<boolean>(() => {
     return localStorage.getItem('multiSelectEnabled') === 'true';
+  });
+
+  const [includeTodayInComparison, setIncludeTodayInComparison] = useState<boolean>(() => {
+    // Default to true if not set
+    return localStorage.getItem('includeTodayInComparison') !== 'false';
   });
 
   // Data State
@@ -53,6 +59,8 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('activities', JSON.stringify(activities)); }, [activities]);
   useEffect(() => { localStorage.setItem('multiSelectEnabled', String(multiSelectEnabled)); }, [multiSelectEnabled]);
+  useEffect(() => { localStorage.setItem('includeTodayInComparison', String(includeTodayInComparison)); }, [includeTodayInComparison]);
+  
   useEffect(() => { 
     if (activeActivity) localStorage.setItem('activeActivity', JSON.stringify(activeActivity));
     else localStorage.removeItem('activeActivity');
@@ -60,13 +68,14 @@ const App: React.FC = () => {
 
 
   // Actions
-  const handleStartActivity = (categoryIds: string[]) => {
+  const handleStartActivity = (categoryIds: string[], mood?: string) => {
     const newActivity: Activity = {
       id: crypto.randomUUID(),
       categoryIds,
       startTime: Date.now(),
       endTime: null,
-      thoughts: []
+      thoughts: [],
+      mood
     };
     setActiveActivity(newActivity);
   };
@@ -133,14 +142,22 @@ const App: React.FC = () => {
       {/* Main Content Area */}
       <main className="order-1 md:order-2 flex-1 overflow-y-auto h-full p-4 md:p-8 pb-24 md:pb-8 relative">
         <header className="mb-6 md:mb-8 flex justify-between items-center sticky top-0 bg-background/95 backdrop-blur-sm z-40 py-2">
-          <div>
+          <div className="flex items-center gap-3">
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
               {view === ViewMode.TRACKER && (activeActivity ? 'Current Focus' : 'Start Focus')}
               {view === ViewMode.HISTORY && 'Activity Log'}
               {view === ViewMode.ANALYTICS && 'Performance'}
               {view === ViewMode.SETTINGS && 'Settings'}
             </h1>
-            <p className="text-gray-500 mt-1 text-xs md:text-sm">
+            {view === ViewMode.HISTORY && (
+              <button 
+                onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                className={`p-2 rounded-full transition-colors ${isCalendarOpen ? 'bg-primary text-white' : 'text-gray-400 hover:text-white bg-surface'}`}
+              >
+                <Icons.Calendar className="w-5 h-5 md:w-6 md:h-6" />
+              </button>
+            )}
+            <p className="text-gray-500 mt-1 text-xs md:text-sm ml-2 hidden md:block">
               {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
           </div>
@@ -169,7 +186,13 @@ const App: React.FC = () => {
           )}
 
           {view === ViewMode.HISTORY && (
-            <HistoryList activities={activities} categories={categories} />
+            <HistoryList 
+              activities={activities} 
+              categories={categories} 
+              isCalendarOpen={isCalendarOpen}
+              onCloseCalendar={() => setIsCalendarOpen(false)}
+              includeTodayInComparison={includeTodayInComparison}
+            />
           )}
 
           {view === ViewMode.ANALYTICS && (
@@ -184,6 +207,8 @@ const App: React.FC = () => {
               onUpdateActivities={setActivities}
               multiSelectEnabled={multiSelectEnabled}
               setMultiSelectEnabled={setMultiSelectEnabled}
+              includeTodayInComparison={includeTodayInComparison}
+              setIncludeTodayInComparison={setIncludeTodayInComparison}
             />
           )}
         </div>

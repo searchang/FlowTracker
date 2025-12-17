@@ -10,6 +10,8 @@ interface SettingsProps {
   onUpdateActivities: (activities: Activity[]) => void;
   multiSelectEnabled: boolean;
   setMultiSelectEnabled: (enabled: boolean) => void;
+  includeTodayInComparison: boolean;
+  setIncludeTodayInComparison: (enabled: boolean) => void;
 }
 
 type SettingsTab = 'categories' | 'sync';
@@ -20,7 +22,9 @@ export const Settings: React.FC<SettingsProps> = ({
   onUpdateCategories,
   onUpdateActivities,
   multiSelectEnabled,
-  setMultiSelectEnabled
+  setMultiSelectEnabled,
+  includeTodayInComparison,
+  setIncludeTodayInComparison
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('categories');
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
@@ -118,7 +122,7 @@ export const Settings: React.FC<SettingsProps> = ({
               : 'text-gray-400 hover:text-white'
           }`}
         >
-          Categories
+          General
         </button>
         <button
           onClick={() => setActiveTab('sync')}
@@ -134,20 +138,40 @@ export const Settings: React.FC<SettingsProps> = ({
 
       {activeTab === 'categories' ? (
         <div className="space-y-6">
-          <div className="bg-surface p-4 rounded-xl border border-gray-800 flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-white">Allow Multi-select Categories</h3>
-              <p className="text-xs text-gray-500">Select multiple categories for a single activity session.</p>
+          <div className="space-y-4">
+            <h3 className="text-gray-400 font-bold uppercase text-xs tracking-wider ml-1">Preferences</h3>
+            
+            <div className="bg-surface p-4 rounded-xl border border-gray-800 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-white">Allow Multi-select Categories</h3>
+                <p className="text-xs text-gray-500">Select multiple categories for a single activity session.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={multiSelectEnabled}
+                  onChange={(e) => setMultiSelectEnabled(e.target.checked)}
+                  className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={multiSelectEnabled}
-                onChange={(e) => setMultiSelectEnabled(e.target.checked)}
-                className="sr-only peer" 
-              />
-              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            </label>
+
+            <div className="bg-surface p-4 rounded-xl border border-gray-800 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-white">Automatically include today in comparison</h3>
+                <p className="text-xs text-gray-500">When selecting past dates, keep today selected for comparison.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={includeTodayInComparison}
+                  onChange={(e) => setIncludeTodayInComparison(e.target.checked)}
+                  className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
           </div>
           
           <CategoryManager categories={categories} onUpdate={onUpdateCategories} />

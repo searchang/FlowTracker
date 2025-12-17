@@ -5,11 +5,13 @@ import { Icons } from './Icon';
 interface ActiveTrackerProps {
   activeActivity: Activity | null;
   categories: Category[];
-  onStart: (categoryIds: string[]) => void;
+  onStart: (categoryIds: string[], mood?: string) => void;
   onStop: () => void;
   onAddThought: (text: string) => void;
   multiSelectEnabled: boolean;
 }
+
+const MOODS = ['⚡️', '🙂', '😐', '😓', '😡'];
 
 export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
   activeActivity,
@@ -23,12 +25,16 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
   // Store selected IDs as an array
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [thoughtText, setThoughtText] = useState('');
+  const [selectedMood, setSelectedMood] = useState<string>('🙂');
 
   useEffect(() => {
     if (activeActivity) {
       const interval = setInterval(() => {
         setElapsed(Date.now() - activeActivity.startTime);
       }, 1000);
+      if (activeActivity.mood) {
+        setSelectedMood(activeActivity.mood);
+      }
       return () => clearInterval(interval);
     } else {
       setElapsed(0);
@@ -46,8 +52,7 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
   const handleCategoryClick = (id: string) => {
     if (multiSelectEnabled) {
       if (selectedCategoryIds.includes(id)) {
-        // Deselect, but prevent empty if you want? The prompt says "until at least 1 category is selected" for start button.
-        // So we allow empty state here, but block start.
+        // Deselect, but allow empty here (start button disabled logic handles validation)
         setSelectedCategoryIds(prev => prev.filter(c => c !== id));
       } else {
         setSelectedCategoryIds(prev => [...prev, id]);
@@ -71,7 +76,7 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
 
   const handleStart = () => {
     if (selectedCategoryIds.length > 0) {
-      onStart(selectedCategoryIds);
+      onStart(selectedCategoryIds, selectedMood);
     }
   };
 
@@ -117,7 +122,7 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
         <div className="text-4xl md:text-6xl font-mono font-bold tracking-wider text-white z-10">
           {formatTime(elapsed)}
         </div>
-        {activeActivity && (
+        {activeActivity ? (
           <div className="absolute bottom-6 md:bottom-10 flex flex-col items-center gap-1 z-10">
              {currentCategories.slice(0, 2).map(c => (
                 <span key={c.id} className="text-xs md:text-sm font-semibold uppercase tracking-widest text-gray-400">
@@ -127,6 +132,23 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
              {currentCategories.length > 2 && (
                <span className="text-xs text-gray-500">+{currentCategories.length - 2} more</span>
              )}
+          </div>
+        ) : (
+          <div className="absolute bottom-6 md:bottom-10 flex flex-col items-center gap-1 z-10 animate-fade-in">
+             <span className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
+               Mood
+             </span>
+             <div className="flex gap-2 bg-surface/80 p-1.5 rounded-full backdrop-blur-sm border border-gray-700">
+               {MOODS.map(m => (
+                 <button
+                   key={m}
+                   onClick={() => setSelectedMood(m)}
+                   className={`w-6 h-6 flex items-center justify-center rounded-full text-sm transition-all hover:scale-125 ${selectedMood === m ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}
+                 >
+                   {m}
+                 </button>
+               ))}
+             </div>
           </div>
         )}
       </div>
@@ -173,16 +195,16 @@ export const ActiveTracker: React.FC<ActiveTrackerProps> = ({
               );
             })}
           </div>
+          
           <button
             onClick={handleStart}
             disabled={selectedCategoryIds.length === 0}
-            className="mt-6 md:mt-8 group relative px-8 py-4 bg-green-500 hover:bg-green-600 rounded-2xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none w-full md:w-auto"
+            className="mt-6 group relative w-20 h-20 md:w-24 md:h-24 bg-green-500 hover:bg-green-600 rounded-full transition-all duration-300 transform hover:scale-110 shadow-[0_0_20px_rgba(34,197,94,0.4)] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center justify-center"
+            title="Start Focus"
           >
-            <div className="flex items-center justify-center gap-3 text-white font-bold text-lg md:text-xl">
-              <Icons.Play className="w-5 h-5 md:w-6 md:h-6 fill-current" />
-              <span>START FOCUS</span>
-            </div>
+            <Icons.Play className="w-8 h-8 md:w-10 md:h-10 text-white fill-current ml-1" />
           </button>
+          
         </div>
       ) : (
         <div className="w-full flex flex-col items-center space-y-4 md:space-y-6 animate-fade-in">
