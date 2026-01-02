@@ -27,37 +27,45 @@ export const Settings: React.FC<SettingsProps> = ({
   setIncludeTodayInComparison
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('categories');
-  const [isGoogleLinked, setIsGoogleLinked] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [linkedEmail, setLinkedEmail] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   useEffect(() => {
-    const linked = localStorage.getItem('isGoogleLinked') === 'true';
-    setIsGoogleLinked(linked);
+    const savedEmail = localStorage.getItem('linkedEmail');
+    if (savedEmail) setLinkedEmail(savedEmail);
     const lastSync = localStorage.getItem('lastSyncTime');
     if (lastSync) setLastSyncTime(lastSync);
   }, []);
 
-  const handleLinkGoogle = () => {
-    // Simulation of OAuth flow
+  const handleLinkAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailInput || !emailInput.includes('@')) return;
+
     setIsSyncing(true);
+    // Simulation of linking process
     setTimeout(() => {
-      setIsGoogleLinked(true);
-      localStorage.setItem('isGoogleLinked', 'true');
+      setLinkedEmail(emailInput);
+      localStorage.setItem('linkedEmail', emailInput);
       setIsSyncing(false);
+      setIsEmailModalOpen(false);
       handleSync();
     }, 1500);
   };
 
   const handleUnlink = () => {
-    setIsGoogleLinked(false);
-    localStorage.removeItem('isGoogleLinked');
-    setLastSyncTime(null);
-    localStorage.removeItem('lastSyncTime');
+    if (confirm('Are you sure you want to unlink this account?')) {
+      setLinkedEmail(null);
+      localStorage.removeItem('linkedEmail');
+      setLastSyncTime(null);
+      localStorage.removeItem('lastSyncTime');
+    }
   };
 
   const handleSync = () => {
-    if (!isGoogleLinked) return;
+    if (!linkedEmail) return;
     setIsSyncing(true);
     // Simulate network request
     setTimeout(() => {
@@ -112,6 +120,71 @@ export const Settings: React.FC<SettingsProps> = ({
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-safe">
       
+      {/* Email Link Modal */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-md animate-fade-in" 
+            onClick={() => !isSyncing && setIsEmailModalOpen(false)} 
+          />
+          <div className="relative bg-surface w-full max-w-md rounded-2xl border border-gray-700 shadow-2xl overflow-hidden animate-slide-up">
+            <div className="p-6 md:p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-1">Link Your Account</h3>
+                  <p className="text-sm text-gray-400">Secure your tracking data and sync across devices.</p>
+                </div>
+                <button 
+                  onClick={() => setIsEmailModalOpen(false)}
+                  disabled={isSyncing}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors disabled:opacity-0"
+                >
+                  <Icons.X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              <form onSubmit={handleLinkAccount} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email Address</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Icons.Smartphone className="w-5 h-5 text-gray-500" />
+                    </div>
+                    <input 
+                      type="email"
+                      required
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="alex@example.com"
+                      className="w-full bg-background border border-gray-700 text-white rounded-xl py-3 pl-10 pr-4 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-primary/5 p-4 rounded-xl border border-primary/20">
+                  <p className="text-xs text-primary/80 leading-relaxed">
+                    By linking your account, your categories, activities, and pinned thoughts will be securely stored and associated with this email address.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSyncing || !emailInput.includes('@')}
+                  className="w-full py-4 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isSyncing ? (
+                    <Icons.Refresh className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Icons.Check className="w-5 h-5" />
+                  )}
+                  <span>{isSyncing ? 'Linking...' : 'Confirm & Sync'}</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="flex p-1 bg-surface rounded-xl border border-gray-800">
         <button
@@ -187,39 +260,30 @@ export const Settings: React.FC<SettingsProps> = ({
             
             <div className="relative z-10">
               <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                <Icons.Cloud className="w-6 h-6 text-primary" /> Google Drive Sync
+                <Icons.Cloud className="w-6 h-6 text-primary" /> Account Synchronization
               </h3>
               <p className="text-gray-400 text-sm mb-6 max-w-md">
-                Automatically backup your tracking history to your Google Drive to keep your data safe and accessible across devices.
+                Securely back up your activity logs and pinned thoughts to your account to never lose your progress.
               </p>
 
-              {!isGoogleLinked ? (
+              {!linkedEmail ? (
                 <button 
-                  onClick={handleLinkGoogle}
+                  onClick={() => setIsEmailModalOpen(true)}
                   disabled={isSyncing}
                   className="flex items-center gap-3 px-6 py-3 bg-white text-gray-900 rounded-lg font-bold hover:bg-gray-100 transition-colors disabled:opacity-50"
                 >
-                  {isSyncing ? (
-                    <Icons.Refresh className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                      <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                    </svg>
-                  )}
-                  <span>{isSyncing ? 'Connecting...' : 'Sign in with Google'}</span>
+                  <Icons.Smartphone className="w-5 h-5" />
+                  <span>Link Email Account</span>
                 </button>
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center gap-4 p-4 bg-background/50 rounded-lg border border-gray-700">
                     <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">
-                      U
+                      {linkedEmail[0].toUpperCase()}
                     </div>
                     <div className="flex-1">
                       <div className="text-sm font-bold text-white">Linked Account</div>
-                      <div className="text-xs text-gray-400">user@example.com</div>
+                      <div className="text-xs text-gray-400">{linkedEmail}</div>
                     </div>
                     <button onClick={handleUnlink} className="text-red-400 hover:text-red-300 p-2">
                       <Icons.LogOut className="w-5 h-5" />
